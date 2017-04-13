@@ -60,7 +60,7 @@
 }
 
 - (void)performRefreshNow {
-  self.content = @"Updating ...";
+  // self.content = @"Updating ...";
   self.errorContent = @"";
   [self rebuildMenuForStatusItem:self.statusItem];
   self.currentLine = -1;
