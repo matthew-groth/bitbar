@@ -1,5 +1,9 @@
 # BitBar Changes
 
+## v2
+
+* Added [streaming through stdout](Docs/LongRunningPlugins.md#streaming-through-stdout)
+
 ## v1.9.2
 
 * Added Sparkle updater
