@@ -83,8 +83,12 @@
 
 - (void)fileHandleDataAvailable:(NSNotification *)notification {
   NSFileHandle *fileHandle = notification.object;
+<<<<<<< HEAD
+  NSString *content = [self.content stringByAppendingString:[[NSString alloc] initWithData:fileHandle.availableData encoding:NSUTF8StringEncoding]];
+=======
   NSString *string = [[NSString alloc] initWithData:fileHandle.availableData encoding:NSUTF8StringEncoding];
   NSString *content = string ? [self.content stringByAppendingString:string] : self.content;
+>>>>>>> matryer/beta
   NSArray *components = [content componentsSeparatedByString:@"~~~"];
   
   if (components.count > 1 && [components[components.count - 2] length] > 0) {
@@ -121,10 +125,19 @@
 }
 
 - (void)performRefreshNow {
+<<<<<<< HEAD
+  // self.content = @"Updating ...";
+  self.errorContent = @"";
+  [self rebuildMenuForStatusItem:self.statusItem];
+  self.currentLine = -1;
+  [self cycleLines];
+  [self.manager pluginDidUdpdateItself:self];
+=======
   if (self.pluginIsVisible) {
     self.statusItem.enabled = NO;
   }
   
+>>>>>>> matryer/beta
   [self refresh];
 }
 

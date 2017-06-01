@@ -285,6 +285,7 @@
 
     NSMutableDictionary *env = NSProcessInfo.processInfo.environment.mutableCopy;
     env[@"BitBar"] = @YES;
+    env[@"BitBarVersion"] = [[NSBundle mainBundle] objectForInfoDictionaryKey:(NSString *)kCFBundleVersionKey];
       
     // Determine if Mac is in Dark Mode
     NSString *osxMode = [[NSUserDefaults standardUserDefaults] stringForKey:@"AppleInterfaceStyle"];
@@ -336,6 +337,69 @@
   }
 
   return YES;
+}
+
+- (void)saveScreenshot:(NSString *)pluginPath destination:(NSString *)dst margin:(CGFloat)margin {
+  for (Plugin *plugin in _plugins) {
+    [plugin close];
+    [self.statusBar removeStatusItem:plugin.statusItem];
+  }
+  
+  Plugin *plugin;
+  
+  if ([@[@"html", @"htm"] containsObject:pluginPath.pathExtension.lowercaseString])
+    plugin = [[HTMLPlugin alloc] initWithManager:self];
+  else
+    plugin = [[ExecutablePlugin alloc] initWithManager:self];
+  
+  plugin.path = pluginPath;
+  plugin.statusItem.title = @"…";
+  
+  _plugins = @[plugin];
+  
+  if ([plugin respondsToSelector:@selector(refreshContentByExecutingCommand:)]) {
+    [(ExecutablePlugin *)plugin refreshContentByExecutingCommand:[plugin.metadata[@"demo"] componentsSeparatedByCharactersInSet:[NSCharacterSet whitespaceCharacterSet]]];
+    
+    plugin.lastUpdated = [NSDate date];
+    
+    [plugin rebuildMenuForStatusItem:plugin.statusItem];
+    
+    // reset the current line
+    plugin.currentLine = -1;
+    
+    // update the status item
+    [plugin cycleLines];
+    
+    // tell the manager this plugin has updated
+    [self pluginDidUdpdateItself:plugin];
+  }
+  
+  dispatch_async(dispatch_get_main_queue(), ^{
+    NSRect screenFrame = [plugin.statusItem.button.window convertRectToScreen:plugin.statusItem.button.frame];
+    screenFrame.origin.y = 0;
+    screenFrame.size.width = MAX(plugin.statusItem.menu.size.width, screenFrame.size.width);
+    screenFrame.size.height += plugin.statusItem.menu.size.height;
+    
+    if (NSMaxX(screenFrame) > CGDisplayPixelsWide(kCGDirectMainDisplay))
+      screenFrame.origin.x -= screenFrame.size.width - plugin.statusItem.button.frame.size.width;
+    
+    if (margin)
+      screenFrame = NSInsetRect(screenFrame, -margin, -margin);
+    
+    CGImageRef image = CGDisplayCreateImageForRect(kCGDirectMainDisplay, screenFrame);
+    NSBitmapImageRep *rep = [[NSBitmapImageRep alloc] initWithCGImage:image];
+    NSData *pngData = [rep representationUsingType:NSPNGFileType properties:@{}];
+    [pngData writeToFile:dst atomically:YES];
+    
+    if (image)
+      CGImageRelease(image);
+    
+    [plugin.statusItem.menu cancelTrackingWithoutAnimation];
+    [self reset];
+  });
+  
+  if (plugin.statusItem.menu)
+    [plugin.statusItem.button performClick:nil];
 }
 
 #pragma mark - NSMenuDelegate

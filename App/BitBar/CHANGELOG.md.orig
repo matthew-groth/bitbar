@@ -1,5 +1,14 @@
 # BitBar Changes
 
+<<<<<<< HEAD
+## v2
+
+* Added [streaming through stdout](Docs/LongRunningPlugins.md#streaming-through-stdout)
+
+## v1.9.2
+
+* Added Sparkle updater
+=======
 ## v2 beta 10
 
 * Added [streaming through stdout](Docs/LongRunningPlugins.md#streaming-through-stdout)
@@ -15,6 +24,7 @@
 * Fixed a crash when the font name has wrong capitalization
 * Fixed a crash when setting `root=true`
 * Grayed out status item during refresh (less distracting)
+>>>>>>> matryer/beta
 
 ## v1.9.1
 

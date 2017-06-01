@@ -180,6 +180,8 @@
 			remoteGlobalIDString = 8DC2EF4F0486A6940098B216;
 			remoteInfo = Sparkle;
 		};
+<<<<<<< HEAD
+=======
 		36D0CE311D0D9DB7001AFB77 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 36D0CDF21D0AF009001AFB77 /* Sparkle.xcodeproj */;
@@ -187,6 +189,7 @@
 			remoteGlobalIDString = 722954B41D04ADAF00ECF9CA;
 			remoteInfo = fileop;
 		};
+>>>>>>> matryer/beta
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -433,7 +436,10 @@
 				36D0CE051D0AF009001AFB77 /* BinaryDelta */,
 				36D0CE071D0AF009001AFB77 /* Autoupdate.app */,
 				36D0CE091D0AF009001AFB77 /* UI Tests.xctest */,
+<<<<<<< HEAD
+=======
 				36D0CE321D0D9DB7001AFB77 /* fileop */,
+>>>>>>> matryer/beta
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -677,6 +683,8 @@
 			remoteRef = 36D0CE081D0AF009001AFB77 /* PBXContainerItemProxy */;
 			sourceTree = BUILT_PRODUCTS_DIR;
 		};
+<<<<<<< HEAD
+=======
 		36D0CE321D0D9DB7001AFB77 /* fileop */ = {
 			isa = PBXReferenceProxy;
 			fileType = "compiled.mach-o.executable";
@@ -684,6 +692,7 @@
 			remoteRef = 36D0CE311D0D9DB7001AFB77 /* PBXContainerItemProxy */;
 			sourceTree = BUILT_PRODUCTS_DIR;
 		};
+>>>>>>> matryer/beta
 /* End PBXReferenceProxy section */
 
 /* Begin PBXResourcesBuildPhase section */

@@ -33,9 +33,15 @@
 - (void)applicationWillFinishLaunching:(NSNotification *)n {
   NSString *feedURLString;
 #ifdef DISTRO
+<<<<<<< HEAD
+  feedURLString = @"https://bitbarapp.com/feeds/distro";
+#else
+  feedURLString = @"https://bitbarapp.com/feeds/bitbar";
+=======
   feedURLString = @"https://bitbarapp.com/feeds/distro-beta";
 #else
   feedURLString = @"https://bitbarapp.com/feeds/beta";
+>>>>>>> matryer/beta
 #endif
   
   SUUpdater *updater = [SUUpdater sharedUpdater];

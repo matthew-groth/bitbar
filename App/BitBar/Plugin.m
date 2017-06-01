@@ -26,6 +26,18 @@
     
     // make the status item
     _statusItem = [self.manager.statusBar statusItemWithLength:NSVariableStatusItemLength];
+  
+    if ([_statusItem respondsToSelector:@selector(button)] && self.metadata[@"droptypes"]) {
+      NSMutableArray *types = [NSMutableArray arrayWithArray:[self.metadata[@"droptypes"] componentsSeparatedByString:@","]];
+      
+      if ([types containsObject:@"filenames"]) {
+        [types removeObject:@"filenames"];
+        [types addObject:NSFilenamesPboardType];
+      }
+      
+      [_statusItem.button.window registerForDraggedTypes:types];
+      _statusItem.button.window.delegate = self;
+    }
     
     // build the menu
     [self rebuildMenuForStatusItem:_statusItem]; _statusItem; });
@@ -44,6 +56,40 @@
     [image setTemplate:true];
   }
   return image;
+}
+
+- (void)loadImageForParams:(NSDictionary *)params completionHandler:(void (^)(NSImage *image))handler {
+  NSString *imageParam = params[@"templateImage"] ?: params[@"image"];
+  
+  if (imageParam) {
+    NSImage *image = [self createImageFromBase64:imageParam isTemplate:!!params[@"templateImage"]];
+    
+    if (image) {
+      handler(image);
+    } else {
+      NSURL *url = [NSURL URLWithString:imageParam];
+      
+      if (url) {
+        [NSURLConnection sendAsynchronousRequest:[NSURLRequest requestWithURL:url]
+                                           queue:[NSOperationQueue mainQueue]
+                               completionHandler:^(NSURLResponse *response, NSData *data, NSError *error) {
+                                 NSImage *image = nil;
+                                 
+                                 if (data) {
+                                   image = [[NSImage alloc] initWithData:data];
+                                   
+                                   if (params[@"templateImage"]) {
+                                     image.template = YES;
+                                   }
+                                 }
+                                 
+                                 handler(image);
+                               }];
+      } else {
+        handler(nil);
+      }
+    }
+  }
 }
 
 - (NSMenuItem*) buildMenuItemWithParams:(NSDictionary *)params {
@@ -81,17 +127,21 @@
     [item setTarget:self];
   }
   BOOL parseANSI = [fullTitle containsANSICodes] && ![[params[@"ansi"] lowercaseString] isEqualToString:@"false"];
-  if (params[@"font"] || params[@"size"] || params[@"color"] || parseANSI)
+  BOOL multiline = [fullTitle rangeOfString:@"\\n"].location != NSNotFound;
+  if (params[@"font"] || params[@"size"] || params[@"color"] || parseANSI || multiline)
     item.attributedTitle = [self attributedTitleWithParams:params];
   
   if (params[@"alternate"]) {
     item.alternate = YES;
     item.keyEquivalentModifierMask = NSAlternateKeyMask;
   }
-  if (params[@"templateImage"]) {
-    item.image = [self createImageFromBase64:params[@"templateImage"] isTemplate:true];
-  }else if (params[@"image"]) {
-    item.image = [self createImageFromBase64:params[@"image"] isTemplate:false];
+  
+  [self loadImageForParams:params completionHandler:^(NSImage *image) {
+    item.image = image;
+  }];
+  
+  if (params[@"checked"]) {
+    item.state = NSOnState;
   }
 
   return item;
@@ -100,6 +150,7 @@
 - (NSAttributedString*) attributedTitleWithParams:(NSDictionary *)params {
 
   NSString * fullTitle = params[@"title"];
+  fullTitle = [fullTitle stringByReplacingOccurrencesOfString:@"\\n" withString:@"\n"];
   if (![[params[@"emojize"] lowercaseString] isEqualToString:@"false"]) {
     fullTitle = [fullTitle emojizedString];
   }
@@ -114,16 +165,10 @@
   NSString * title = truncLength < titleLength ? [[fullTitle substringToIndex:truncLength] stringByAppendingString:@"…"] : fullTitle;
 
   CGFloat     size = params[@"size"] ? [params[@"size"] floatValue] : 14;
-  NSFont    * font;
-  if ([NSFont respondsToSelector:@selector(monospacedDigitSystemFontOfSize:weight:)]) {
-    font = [self isFontValid:params[@"font"]] ? [NSFont fontWithName:params[@"font"] size:size]
-                                       : [NSFont monospacedDigitSystemFontOfSize:size weight:NSFontWeightRegular]
-                                      ?: [NSFont monospacedDigitSystemFontOfSize:size weight:NSFontWeightRegular];
-  } else {
-    font = [self isFontValid:params[@"font"]] ? [NSFont fontWithName:params[@"font"] size:size]
-                                       : [NSFont menuFontOfSize:size]
-                                       ?: [NSFont menuFontOfSize:size];
-  }
+  NSFont    * font = [self validFont:params[@"font"] size:size]
+                                      ?: [NSFont respondsToSelector:@selector(monospacedDigitSystemFontOfSize:weight:)]
+                                       ? [NSFont monospacedDigitSystemFontOfSize:size weight:NSFontWeightRegular]
+                                       : [NSFont menuFontOfSize:size];
 
   NSDictionary* attributes = @{NSFontAttributeName: font, NSBaselineOffsetAttributeName : @1};
   BOOL parseANSI = [fullTitle containsANSICodes] && ![[params[@"ansi"] lowercaseString] isEqualToString:@"false"];
@@ -429,16 +474,14 @@
     }
     
     // Add image if present
-    if (params[@"templateImage"]) {
-      self.statusItem.image = [self createImageFromBase64:params[@"templateImage"] isTemplate:true];
-    }else if (params[@"image"]) {
-      self.statusItem.image = [self createImageFromBase64:params[@"image"] isTemplate:false];
-    } else {
-      self.statusItem.image = nil;
-    }
+    [self loadImageForParams:params completionHandler:^(NSImage *image) {
+      _statusItem.image = image;
+    }];
     
     
     self.statusItem.attributedTitle = [self attributedTitleWithParams:params];
+    self.statusItem.enabled = YES;
+    
     self.pluginIsVisible = YES;
   } else {
     self.statusItem = nil;
@@ -453,15 +496,13 @@
   _allContentLines = nil;
 }
 
-- (BOOL) isFontValid:(NSString *)fontName {
-  if (fontName == nil) {
-    return NO;
-  }
+- (NSFont *)validFont:(NSString *)fontName size:(CGFloat)size {
+  if (!fontName) return nil;
   
-  NSFontDescriptor *fontDescriptor = [NSFontDescriptor fontDescriptorWithFontAttributes:@{NSFontNameAttribute:fontName}];
-  NSArray *matches = [fontDescriptor matchingFontDescriptorsWithMandatoryKeys: nil];
+  NSFontDescriptor *fontDescriptor = [NSFontDescriptor fontDescriptorWithFontAttributes:@{NSFontNameAttribute : fontName}];
+  NSFontDescriptor *match = [fontDescriptor matchingFontDescriptorWithMandatoryKeys:nil];
   
-  return ([matches count] > 0);
+  return match ? [NSFont fontWithDescriptor:match size:size] : nil;
 }
 
 - (void) setContent:(NSString *)content {
@@ -566,6 +607,18 @@
 }
 
 - (void)statusItemClicked {
+  BOOL altKeyDown = ([NSEvent modifierFlags] & NSAlternateKeyMask) != 0;
+  if (altKeyDown) {
+    [self rebuildMenuForStatusItem:self.statusItem];
+    
+    NSMenu *menu = self.statusItem.menu;
+    
+    self.statusItem.menu = nil;
+    [self.statusItem popUpStatusItemMenu:menu];
+    
+    return;
+  }
+  
   NSDictionary *params = [self dictionaryForLine:self.titleLines[self.currentLine]];
   if (params[@"href"]) {
     [self performHREFAction:params];
@@ -574,6 +627,33 @@
   } else if (params[@"refresh"]) {
     [self performRefreshNow];
   }
+}
+
+- (NSDictionary *)metadata {
+  if (!_metadata) {
+    NSArray *tags = @[@"droptypes", @"demo"];
+    
+    NSString *string = [NSString stringWithContentsOfFile:self.path encoding:NSUTF8StringEncoding error:NULL];
+    
+    if (!string) {
+      return nil;
+    }
+    
+    NSMutableDictionary *metadata = [NSMutableDictionary dictionaryWithCapacity:tags.count];
+    
+    for (NSString *tag in tags) {
+      NSRegularExpression *regex = [NSRegularExpression regularExpressionWithPattern:[NSString stringWithFormat:@"<bitbar\\.%@>(.*?)<\\/bitbar\\.%@>", tag, tag] options:0 error:NULL];
+      NSTextCheckingResult *match = [regex firstMatchInString:string options:0 range:NSMakeRange(0, string.length)];
+      
+      if (match) {
+        [metadata setObject:[string substringWithRange:[match rangeAtIndex:1]] forKey:tag];
+      }
+    }
+    
+    _metadata = metadata;
+  }
+  
+  return _metadata;
 }
 
 #pragma mark - NSMenuDelegate
@@ -631,6 +711,48 @@
       item.attributedTitle = [self attributedTitleWithParams:params];
     }
   }
+}
+
+#pragma mark - NSWindowDelegate
+
+- (NSDragOperation)draggingEntered:(id <NSDraggingInfo>)sender {
+  return NSDragOperationCopy;
+}
+
+- (BOOL)performDragOperation:(id <NSDraggingInfo>)sender {
+  NSArray *types = [self.metadata[@"droptypes"] componentsSeparatedByString:@","];
+  NSPasteboard *pboard = [sender draggingPasteboard];
+  NSMutableArray *args = [NSMutableArray array];
+  
+  for (NSString *type in types) {
+    if ([type isEqualToString:@"filenames"]) {
+      if (![pboard.types containsObject:NSFilenamesPboardType]) {
+        continue;
+      }
+      
+      NSArray *files = [pboard propertyListForType:NSFilenamesPboardType];
+      
+      [args addObject:@"-filenames"];
+      [args addObjectsFromArray:files];
+      
+      break;
+    }
+    
+    if ([pboard.types containsObject:type]) {
+      NSString *string = [pboard stringForType:type];
+      
+      if (string) {
+        [args addObject:[@"-" stringByAppendingString:type]];
+        [args addObject:string];
+      }
+    }
+  }
+  
+  if (args.count) {
+    [self performSelectorInBackground:@selector(startTask:) withObject:@{@"bash" : self.path, @"args" : args, @"refresh" : @""}];
+  }
+  
+  return YES;
 }
 
 @end

@@ -149,10 +149,11 @@ If you want to contribute, please send us a pull request and we'll add it to our
     * `length=..` to truncate the line to the specified number of characters. A `…` will be added to any truncated strings, as well as a tooltip displaying the full string. eg. `length=10`
     * `trim=..` whether to trim leading/trailing whitespace from the title.  `true` or `false` (defaults to `true`)
     * `alternate=true` to mark a line as an alternate to the previous one for when the Option key is pressed in the dropdown
-    * `templateImage=..` set an image for this item. The image data must be passed as base64 encoded string and should consist of only black and clear pixels. The alpha channel in the image can be used to adjust the opacity of black content, however. This is the recommended way to set an image for the statusbar. Use a 144 DPI resolution to support Retina displays. The imageformat can be any of the formats supported by Mac OS X
-    * `image=..` set an image for this item. The image data must be passed as base64 encoded string. Use a 144 DPI resolution to support Retina displays. The imageformat can be any of the formats supported by Mac OS X
+    * `templateImage=..` set an image for this item. The image data must be passed as base64 encoded string or URL and should consist of only black and clear pixels. The alpha channel in the image can be used to adjust the opacity of black content, however. This is the recommended way to set an image for the statusbar. Use a 144 DPI resolution to support Retina displays. The imageformat can be any of the formats supported by Mac OS X
+    * `image=..` set an image for this item. The image data must be passed as base64 encoded string or URL. Use a 144 DPI resolution to support Retina displays. The imageformat can be any of the formats supported by Mac OS X
     * `emojize=false` will disable parsing of github style `:mushroom:` into :mushroom:
     * `ansi=false` turns off parsing of ANSI codes.
+    * `checked=true` for a checkmark
 
 ### Metadata
 
@@ -167,6 +168,8 @@ To enhance your entry on [getbitbar.com](https://getbitbar.com/), add the follow
 # <bitbar.image>http://www.hosted-somewhere/pluginimage</bitbar.image>
 # <bitbar.dependencies>python,ruby,node</bitbar.dependencies>
 # <bitbar.abouturl>http://url-to-about.com/</bitbar.abouturl>
+# <bitbar.droptypes>filenames,public.url</bitbar.droptypes>
+# <bitbar.demo>--demo</bitbar.demo>
 ```
 
   * The comment characters can be anything - use what is suitable for your language
@@ -178,6 +181,9 @@ To enhance your entry on [getbitbar.com](https://getbitbar.com/), add the follow
   * `bitbar.image` - A hosted image showing a preview of your plugin (ideally open)
   * `bitbar.dependencies` - Comma separated list of dependencies
   * `bitbar.abouturl` - Absolute URL to about information
+  * `bitbar.droptypes` - [Uniform type identifiers](https://developer.apple.com/library/mac/documentation/Miscellaneous/Reference/UTIRef/Articles/System-DeclaredUniformTypeIdentifiers.html) or `filenames`, comma separated.  
+Plugin is executed with arguments `-type` and the dropped item(s) ([example](Docs/DropToPlugin.md#example))
+  * `bitbar.demo` - Whitespace separated arguments to execute plugin with in demo mode (i.e. when [saving a screenshot](Docs/URLScheme.md#screenshot))
 
 For a real example, see the [Cycle text and detail plugin source code](https://github.com/matryer/bitbar-plugins/blob/master/Tutorial/cycle_text_and_detail.sh).
 
